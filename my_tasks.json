@@ -1,0 +1,32 @@
+{
+  "tasks": [
+    {
+      "id": "l1-1767668816294",
+      "title": "今年做点什么",
+      "type": "L1",
+      "startDate": "2026-01-06",
+      "endDate": "2026-01-13",
+      "children": [
+        {
+          "id": "l2-1767669356228",
+          "title": "吃点好的",
+          "type": "L2",
+          "parentId": "l1-1767668816294",
+          "startDate": "2026-01-06",
+          "endDate": "2026-01-13",
+          "children": [
+            {
+              "id": "l3-1767669493385",
+              "title": "大龙虾",
+              "type": "L3",
+              "parentId": "l2-1767669356228",
+              "completed": false,
+              "scheduledDate": null
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "theme": "fresh"
+}

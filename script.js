@@ -363,6 +363,15 @@ function toggleTaskCompletion(taskId) {
     }
 }
 
+function toggleCollapse(taskId) {
+    const task = findTask(taskId);
+    if (task) {
+        task.collapsed = !task.collapsed;
+        saveData();
+        renderTaskList(); // Only need to re-render list
+    }
+}
+
 function scheduleTasktToDate() {
     const select = document.getElementById('modal-task-select');
     const taskId = select.value;
@@ -470,16 +479,8 @@ function renderDayTasks(cell, dateStr) {
     const date = new Date(dateStr);
 
     tasks.forEach(l1 => {
-        if (isDateInRange(dateStr, l1.startDate, l1.endDate)) {
-            const bar = document.createElement('div');
-            bar.className = 'gantt-bar l1';
-            bar.title = l1.title;
-            // Show label if start date OR first day of month (continuation)
-            if (dateStr === l1.startDate || date.getDate() === 1) {
-                bar.innerHTML = `<span class="gantt-label">${l1.title}</span>`;
-            }
-            cell.appendChild(bar);
-        }
+        // Skip L1 rendering in Calendar as requested
+        // if (isDateInRange(dateStr, l1.startDate, l1.endDate)) { ... }
 
         if (l1.children) {
             l1.children.forEach(l2 => {
@@ -497,12 +498,18 @@ function renderDayTasks(cell, dateStr) {
     });
 
     const flatL3 = getAllTasksFlat().filter(t => t.type === 'L3' && t.scheduledDate === dateStr);
-    if (flatL3.length > 0) {
-        const badge = document.createElement('div');
-        badge.className = 'l3-badge';
-        badge.textContent = `${flatL3.length} 个任务`;
-        cell.appendChild(badge);
-    }
+    flatL3.forEach(l3 => {
+        const bar = document.createElement('div');
+        bar.className = `gantt-bar l3 ${l3.completed ? 'completed' : ''}`;
+        bar.title = l3.title;
+        // L3 is single day, so always show label
+        bar.innerHTML = `<span class="gantt-label">${l3.title}</span>`;
+
+        // Prevent clicking the bar from opening the modal? 
+        // No, clicking bar should probably just open the day modal like the cell does.
+        // Handled by cell.onclick bubbling.
+        cell.appendChild(bar);
+    });
 }
 
 function isDateInRange(target, start, end) {
@@ -680,6 +687,19 @@ function createTaskNode(task) {
         </div>
     ` : '';
 
+    // Collapse Button (L1/L2 only)
+    let collapseBtn = '';
+    if (task.type !== 'L3') {
+        const rotation = task.collapsed ? '-90deg' : '0deg';
+        const stopProp = 'event.stopPropagation();';
+        // Using a larger, clearer chevron icon (Material Design 'expand_more')
+        collapseBtn = `
+            <button class="btn icon-btn small collapse-btn" onclick="${stopProp} toggleCollapse('${task.id}')" style="margin-right:0.5rem; transform: rotate(${rotation}); transition: transform 0.2s;">
+                <svg class="icon" viewBox="0 0 24 24" style="width: 20px; height: 20px;"><path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg>
+            </button>
+        `;
+    }
+
     // Date Range (Simple display)
     const dateMeta = (task.startDate && task.endDate) ?
         `<span class="task-meta">${ICONS.time} ${task.startDate.slice(5)} - ${task.endDate.slice(5)}</span>` : '';
@@ -699,6 +719,7 @@ function createTaskNode(task) {
     const content = `
         <div class="task-row ${task.type.toLowerCase()}">
             <div class="task-header">
+                ${collapseBtn}
                 ${checkboxHtml}
                 <div class="task-info">
                     <div style="flex:1">
@@ -717,7 +738,8 @@ function createTaskNode(task) {
     const wrapper = document.createElement('div');
     wrapper.innerHTML = content;
 
-    if (task.children && task.children.length > 0) {
+    // Render children ONLY if not collapsed
+    if (!task.collapsed && task.children && task.children.length > 0) {
         const childrenContainer = document.createElement('div');
         childrenContainer.className = 'children-container';
         task.children.forEach(child => {
